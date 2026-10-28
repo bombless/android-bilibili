@@ -2,6 +2,8 @@ package com.bilibili.compose.data.repository
 
 import com.bilibili.compose.data.api.BiliApiService
 import com.bilibili.compose.data.api.BiliPassportService
+import com.bilibili.compose.data.cdp.CdpSyncResult
+import com.bilibili.compose.data.cdp.EdgeCdpSyncManager
 import com.bilibili.compose.data.local.UserSessionStore
 import com.bilibili.compose.data.model.NavData
 import com.bilibili.compose.data.model.QrGenerateData
@@ -23,8 +25,15 @@ class AuthRepository(
     private val sessionStore: UserSessionStore
 ) {
 
+    var cdpSyncManager: EdgeCdpSyncManager? = null
+
     val isLoggedInFlow: Flow<Boolean> = sessionStore.isLoggedInFlow
     val userNavFlow: Flow<NavData?> = sessionStore.userNavFlow
+
+    suspend fun syncWithEdgeCdp(port: Int = 9222): CdpSyncResult {
+        val manager = cdpSyncManager ?: return CdpSyncResult(false, "CDP 同步服务未就绪")
+        return manager.syncFromEdge(port = port)
+    }
 
     suspend fun generateQrCode(): Result<QrGenerateData> = withContext(Dispatchers.IO) {
         try {

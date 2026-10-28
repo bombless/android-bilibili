@@ -6,8 +6,10 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.bilibili.compose.data.api.RetrofitClient
+import com.bilibili.compose.data.cdp.EdgeCdpSyncManager
 import com.bilibili.compose.data.local.UserSessionStore
 import com.bilibili.compose.data.repository.AuthRepository
+import com.bilibili.compose.data.repository.DynamicRepository
 import com.bilibili.compose.data.repository.VideoRepository
 import okhttp3.OkHttpClient
 
@@ -24,6 +26,10 @@ class BiliApp : Application(), ImageLoaderFactory {
         private set
     lateinit var videoRepository: VideoRepository
         private set
+    lateinit var dynamicRepository: DynamicRepository
+        private set
+    lateinit var cdpSyncManager: EdgeCdpSyncManager
+        private set
     lateinit var authRepository: AuthRepository
         private set
 
@@ -34,11 +40,19 @@ class BiliApp : Application(), ImageLoaderFactory {
         sessionStore = UserSessionStore(this)
         retrofitClient = RetrofitClient(sessionStore)
         videoRepository = VideoRepository(retrofitClient.apiService)
+        dynamicRepository = DynamicRepository(retrofitClient.apiService)
+        cdpSyncManager = EdgeCdpSyncManager(
+            sessionStore = sessionStore,
+            apiService = retrofitClient.apiService,
+            okHttpClient = retrofitClient.okHttpClient
+        )
         authRepository = AuthRepository(
             passportService = retrofitClient.passportService,
             apiService = retrofitClient.apiService,
             sessionStore = sessionStore
-        )
+        ).apply {
+            this.cdpSyncManager = this@BiliApp.cdpSyncManager
+        }
     }
 
     override fun newImageLoader(): ImageLoader {

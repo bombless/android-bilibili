@@ -119,29 +119,21 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
      */
     fun importFromEdgeCdp(host: String = "10.0.2.2", port: Int = 9222) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(cdpSyncLoading = true, cdpMessage = "正在连接 CDP 服务...")
-            val result = withContext(Dispatchers.IO) {
-                val hostsToTry = listOf(host, "localhost", "127.0.0.1")
-                var errorMsg = ""
-                for (h in hostsToTry) {
-                    try {
-                        val url = URL("http://$h:$port/json/list")
-                        val conn = url.openConnection() as HttpURLConnection
-                        conn.connectTimeout = 2000
-                        conn.readTimeout = 2000
-                        if (conn.responseCode == 200) {
-                            val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                            val json = reader.readText()
-                            reader.close()
-                            return@withContext "已成功连接 Edge CDP ($h:$port)！\n页面列表已读取。若浏览器已登录B站，可通过CDP网络协议同步Cookie。"
-                        }
-                    } catch (e: Exception) {
-                        errorMsg = e.message ?: "连接失败"
-                    }
-                }
-                "未能在常用地址连接 CDP (端口 $port): $errorMsg\n如果是真机调试，请执行:\nadb reverse tcp:9222 tcp:9222"
+            _uiState.value = _uiState.value.copy(cdpSyncLoading = true, cdpMessage = "正在通过 CDP 连接 Edge 浏览器提取 Cookie...")
+            val syncResult = authRepository.syncWithEdgeCdp(port = port)
+            if (syncResult.success) {
+                _uiState.value = _uiState.value.copy(
+                    cdpSyncLoading = false,
+                    isSuccess = true,
+                    statusText = syncResult.message,
+                    cdpMessage = syncResult.message
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    cdpSyncLoading = false,
+                    cdpMessage = syncResult.message
+                )
             }
-            _uiState.value = _uiState.value.copy(cdpSyncLoading = false, cdpMessage = result)
         }
     }
 

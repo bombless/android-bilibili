@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.DynamicFeed
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Whatshot
@@ -40,6 +41,7 @@ fun HomeScreen(
     onVideoClick: (String) -> Unit,
     onProfileClick: () -> Unit,
     onPopularClick: () -> Unit,
+    onDynamicClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -69,14 +71,10 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "哔哩哔哩",
-                            color = BiliPink,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 20.sp
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Surface(
                             shape = CircleShape,
                             color = BiliPink.copy(alpha = 0.15f),
@@ -86,19 +84,45 @@ fun HomeScreen(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Whatshot,
                                     contentDescription = "热门专区",
                                     tint = BiliPink,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(3.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "热门",
                                     color = BiliPink,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = BiliPink.copy(alpha = 0.15f),
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .clickable(onClick = onDynamicClick)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DynamicFeed,
+                                    contentDescription = "动态",
+                                    tint = BiliPink,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "动态",
+                                    color = BiliPink,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }

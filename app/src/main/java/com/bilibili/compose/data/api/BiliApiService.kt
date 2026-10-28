@@ -60,6 +60,27 @@ interface BiliApiService {
 
     @GET("x/web-interface/nav")
     suspend fun getNav(): BiliResponse<NavData>
+
+    @GET("x/polymer/web-dynamic/v1/portal")
+    suspend fun getDynamicPortal(
+        @Query("up_list_more") upListMore: Int = 1
+    ): BiliResponse<DynamicPortalData>
+
+    @GET("x/polymer/web-dynamic/v1/feed/all")
+    suspend fun getAllDynamics(
+        @Query("timezone_offset") timezoneOffset: Int = -480,
+        @Query("type") type: String = "all",
+        @Query("offset") offset: String? = null,
+        @Query("page") page: Int = 1
+    ): BiliResponse<DynamicFeedData>
+
+    @GET("x/polymer/web-dynamic/v1/feed/space")
+    suspend fun getSpaceDynamics(
+        @Query("host_mid") hostMid: Long,
+        @Query("timezone_offset") timezoneOffset: Int = -480,
+        @Query("offset") offset: String? = null,
+        @Query("page") page: Int = 1
+    ): BiliResponse<DynamicFeedData>
 }
 
 interface BiliPassportService {

@@ -14,6 +14,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.bilibili.compose.ui.dynamic.DynamicScreen
+import com.bilibili.compose.ui.dynamic.DynamicViewModel
 import com.bilibili.compose.ui.home.HomeScreen
 import com.bilibili.compose.ui.home.HomeViewModel
 import com.bilibili.compose.ui.login.LoginScreen
@@ -68,6 +70,23 @@ fun BiliNavHost() {
                 },
                 onPopularClick = {
                     navController.navigate(Screen.Popular.route)
+                },
+                onDynamicClick = {
+                    navController.navigate(Screen.Dynamic.route)
+                }
+            )
+        }
+
+        // Dynamic Feed & Creator Filter
+        composable(Screen.Dynamic.route) {
+            val dynamicViewModel: DynamicViewModel = viewModel {
+                DynamicViewModel(app.dynamicRepository, app.authRepository)
+            }
+            DynamicScreen(
+                viewModel = dynamicViewModel,
+                onBackClick = { navController.popBackStack() },
+                onVideoClick = { bvid ->
+                    navController.navigate(Screen.VideoDetail.createRoute(bvid))
                 }
             )
         }

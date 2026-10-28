@@ -112,8 +112,63 @@ async function testQrLogin() {
   console.log(`    QR Gen code: ${data.code}, key: ${data.data?.qrcode_key}`);
 }
 
+async function testDynamicWithCdp(pages) {
+  console.log(`\n[8] Testing Dynamic & Creator Filtering with Edge CDP (port 9222)...`);
+  const biliPage = pages?.find(p => p.url?.includes('bilibili.com') || p.title?.includes('动态'));
+  if (!biliPage || !biliPage.webSocketDebuggerUrl) {
+    console.log('    No Bilibili dynamic page found on CDP.');
+    return;
+  }
+
+  const ws = new WebSocket(biliPage.webSocketDebuggerUrl);
+  await new Promise(r => ws.onopen = r);
+
+  const cookies = await new Promise(resolve => {
+    ws.onmessage = (e) => {
+      resolve(JSON.parse(e.data).result?.cookies || []);
+    };
+    ws.send(JSON.stringify({
+      id: 1,
+      method: 'Network.getCookies',
+      params: { urls: ['https://bilibili.com', 'https://api.bilibili.com', 'https://t.bilibili.com'] }
+    }));
+  });
+  ws.close();
+
+  const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+  console.log(`    Retrieved ${cookies.length} cookies from Edge!`);
+
+  // Test Portal
+  const portalRes = await fetch('https://api.bilibili.com/x/polymer/web-dynamic/v1/portal?up_list_more=1', {
+    headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://t.bilibili.com/', 'Cookie': cookieStr }
+  });
+  const portalData = await portalRes.json();
+  const upCount = portalData.data?.up_list?.items?.length || 0;
+  console.log(`    Portal Response: code ${portalData.code}, creators followed: ${upCount}`);
+  if (upCount > 0) {
+    console.log(`    Top creators:`, portalData.data.up_list.items.slice(0, 3).map(u => u.uname));
+  }
+
+  // Test Feed
+  const feedRes = await fetch('https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all?timezone_offset=-480&type=all&page=1', {
+    headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://t.bilibili.com/', 'Cookie': cookieStr }
+  });
+  const feedData = await feedRes.json();
+  console.log(`    All Dynamics: code ${feedData.code}, items returned: ${feedData.data?.items?.length}`);
+
+  // Test Space Dynamic (filtering by top creator)
+  if (upCount > 0) {
+    const topCreator = portalData.data.up_list.items[0];
+    const spaceRes = await fetch(`https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid=${topCreator.mid}&timezone_offset=-480&page=1`, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://t.bilibili.com/', 'Cookie': cookieStr }
+    });
+    const spaceData = await spaceRes.json();
+    console.log(`    Filtered Dynamics for [${topCreator.uname}]: items count ${spaceData.data?.items?.length}`);
+  }
+}
+
 async function main() {
-  await checkCdp();
+  const pages = await checkCdp();
   const v = await testPopular();
   await testRanking();
   await testPrecious();
@@ -122,6 +177,9 @@ async function main() {
     await testPlayUrl(v.bvid, v.cid);
   }
   await testQrLogin();
+  if (pages) {
+    await testDynamicWithCdp(pages);
+  }
 }
 
 main().catch(console.error);
