@@ -1,0 +1,79 @@
+# 哔哩哔哩 (Bilibili) Android 客户端
+
+基于 **Kotlin + Jetpack Compose + Material 3** 构建的现代化 Bilibili 客户端，支持账号扫码登录、首页热门视频流推荐、ExoPlayer 视频高清流畅播放、多分P切换、相关视频推荐以及视频评论。
+
+同时集成了 **Edge 浏览器 CDP (Chrome DevTools Protocol) 联动调试机制**（默认端口 `9222`），可供接口参考、抓包验证与 Cookie 状态快速测试。
+
+---
+
+## 🌟 功能特性
+
+### 1. 首页热门视频推荐 (`HomeScreen`)
+- 采用 B 站官方推荐/热门 API (`/x/web-interface/popular`)，分页无限加载；
+- 视频卡片优雅展示：16:9 高清封面（自动处理 Anti-Hotlink 鉴权防盗链）、播放量与弹幕数统计、视频时长标签、UP主信息标签；
+- 支持下拉刷新与滑到底部自动加载更多。
+
+### 2. 视频详情与多媒体播放 (`VideoDetailScreen`)
+- 基于 **AndroidX Media3 (ExoPlayer)** 实现；
+- **防盗链优化**：配置专门的 `DefaultHttpDataSource`，注入合法的 `Referer: https://www.bilibili.com/` 与浏览器 `User-Agent`，解决 B 站 CDN 403 访问限制；
+- **分P支持**：针对多分P视频（`pages.size > 1`）自动展示水平选集栏，点击瞬间无缝切换分P播放；
+- **画质支持**：支持解析清晰度列表（720P、360P 等）；
+- **相关视频推荐与评论切换**：
+  - 点击“相关推荐”中的卡片可直接切换至新视频；
+  - 切换至“评论”标签可浏览用户热评、点赞量及楼层时间。
+
+### 3. 账号登录系统 (`LoginScreen`)
+- **二维码扫码登录**：
+  - 接入 B 站官方 Passport 二维码登录 API (`/x/passport-login/web/qrcode/generate`)；
+  - 本地使用 ZXing 动态生成清晰二维码；
+  - 自动轮询登录状态（未扫码、已扫码待确认、已失效、登录成功）；
+  - 登录成功自动捕获并持久化存储 `SESSDATA`、`bili_jct`、`DedeUserID` 等凭据。
+- **Edge 浏览器 CDP 联动 (端口 9222)**：
+  - 配合宿主运行在 9222 端口的 Edge 浏览器，提供 CDP 测试与会话同步入口。
+- **手动输入 Cookie / SESSDATA**：
+  - 为开发者及高级用户提供直接粘贴 Cookie 的快捷方案。
+
+### 4. 个人中心 (`ProfileScreen`)
+- 登录后展示：用户头像、昵称、UID、硬币余额、B币余额、大会员及等级（Lv.1 ~ Lv.6）；
+- 未登录状态提供一键登录引导；
+- 支持一键安全退出登录。
+
+---
+
+## 🏗 技术栈与架构
+
+- **语言**: Kotlin 2.0+
+- **UI 框架**: Jetpack Compose (Material 3)
+- **网络层**: Retrofit 2 + OkHttp 3 + Gson
+- **图片加载**: Coil Compose (配置自定义 Referer 拦截器)
+- **视频播放**: AndroidX Media3 (ExoPlayer 1.4.1)
+- **本地存储**: Jetpack DataStore (Preferences)
+- **条码生成**: Google ZXing Core 3.5.3
+- **架构**: 经典 MVVM 架构，分层清晰 (data/model, data/api, data/local, data/repository, ui/*)
+
+---
+
+## 🛠 编译与运行
+
+### 编译 Debug APK
+```bash
+# 在项目根目录下执行
+./gradlew assembleDebug
+```
+生成的 APK 位于：
+`app/build/outputs/apk/debug/app-debug.apk`
+
+### 安装到设备
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+### CDP 调试与端口映射 (端口 9222)
+若在模拟器或真机上测试宿主机 Edge 浏览器的 CDP 调试服务（宿主机启动参数 `--remote-debugging-port=9222`）：
+```bash
+# 真机通过 USB 调试时映射端口
+adb reverse tcp:9222 tcp:9222
+
+# 运行终端测试脚本
+node tools/test_app_api.mjs
+```

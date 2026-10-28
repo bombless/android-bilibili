@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">哔哩哔哩</string>
+    <string name="nav_home">首页</string>
+    <string name="nav_profile">我的</string>
+    <string name="login_title">账号登录</string>
+    <string name="login_scan_tip">请使用 哔哩哔哩 客户端扫码登录</string>
+    <string name="login_refresh">点击刷新二维码</string>
+</resources>
