@@ -21,6 +21,8 @@ import com.bilibili.compose.ui.login.LoginViewModel
 import com.bilibili.compose.ui.navigation.Screen
 import com.bilibili.compose.ui.player.PlayerViewModel
 import com.bilibili.compose.ui.player.VideoDetailScreen
+import com.bilibili.compose.ui.popular.PopularScreen
+import com.bilibili.compose.ui.popular.PopularViewModel
 import com.bilibili.compose.ui.profile.ProfileScreen
 import com.bilibili.compose.ui.profile.ProfileViewModel
 import com.bilibili.compose.ui.theme.BilibiliTheme
@@ -63,6 +65,23 @@ fun BiliNavHost() {
                 },
                 onProfileClick = {
                     navController.navigate(Screen.Profile.route)
+                },
+                onPopularClick = {
+                    navController.navigate(Screen.Popular.route)
+                }
+            )
+        }
+
+        // Popular
+        composable(Screen.Popular.route) {
+            val popularViewModel: PopularViewModel = viewModel {
+                PopularViewModel(app.videoRepository)
+            }
+            PopularScreen(
+                viewModel = popularViewModel,
+                onBackClick = { navController.popBackStack() },
+                onVideoClick = { bvid ->
+                    navController.navigate(Screen.VideoDetail.createRoute(bvid))
                 }
             )
         }

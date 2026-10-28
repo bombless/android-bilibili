@@ -20,6 +20,49 @@ class VideoRepository(private val apiService: BiliApiService) {
         }
     }
 
+    suspend fun getRecommendVideos(freshIdx: Int = 1, pageSize: Int = 10): Result<List<VideoItem>> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getRecommendVideos(pageSize = pageSize, freshIdx = freshIdx)
+            if (response.isSuccess && response.data != null) {
+                val valid = response.data.item.filter { it.bvid.isNotBlank() }
+                Result.success(valid)
+            } else {
+                Result.failure(Exception(response.message.ifBlank { "获取推荐视频失败" }))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getRankingVideos(rid: Int = 0, day: Int = 3): Result<List<VideoItem>> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getRankingVideos(rid = rid, day = day)
+            if (response.isSuccess && response.data != null) {
+                val items = response.data.list.mapIndexed { index, rankingItem ->
+                    rankingItem.toVideoItem(rank = index + 1)
+                }
+                Result.success(items)
+            } else {
+                Result.failure(Exception(response.message.ifBlank { "获取排行榜失败" }))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getPreciousVideos(page: Int = 1, pageSize: Int = 50): Result<List<VideoItem>> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getPreciousVideos(page = page, pageSize = pageSize)
+            if (response.isSuccess && response.data != null) {
+                Result.success(response.data.list)
+            } else {
+                Result.failure(Exception(response.message.ifBlank { "获取入站必刷失败" }))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getVideoDetail(bvid: String): Result<VideoViewData> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.getVideoView(bvid)

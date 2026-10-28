@@ -22,7 +22,7 @@ async function checkCdp() {
 }
 
 async function testPopular() {
-  console.log(`\n[2] Testing Popular Videos API...`);
+  console.log(`\n[2] Testing Popular Videos API (综合热门)...`);
   const res = await fetch('https://api.bilibili.com/x/web-interface/popular?pn=1&ps=5', {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -33,13 +33,61 @@ async function testPopular() {
   console.log(`    Response code: ${data.code}, items returned: ${data.data?.list?.length}`);
   if (data.data?.list?.[0]) {
     const v = data.data.list[0];
-    console.log(`    Top Video: [${v.bvid}] ${v.title} by ${v.owner?.name}`);
+    console.log(`    Top Popular Video: [${v.bvid}] ${v.title} by ${v.owner?.name}`);
     return v;
   }
 }
 
+async function testRanking() {
+  console.log(`\n[3] Testing Ranking API (排行榜)...`);
+  const res = await fetch('https://api.bilibili.com/x/web-interface/ranking?rid=0&day=3', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Referer': 'https://www.bilibili.com/'
+    }
+  });
+  const data = await res.json();
+  console.log(`    Response code: ${data.code}, items returned: ${data.data?.list?.length}`);
+  if (data.data?.list?.[0]) {
+    const v = data.data.list[0];
+    console.log(`    Top Ranked Video: [${v.bvid}] ${v.title} by ${v.author} (play: ${v.play})`);
+  }
+}
+
+async function testPrecious() {
+  console.log(`\n[4] Testing Precious API (入站必刷)...`);
+  const res = await fetch('https://api.bilibili.com/x/web-interface/popular/precious?page=1&page_size=5', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Referer': 'https://www.bilibili.com/'
+    }
+  });
+  const data = await res.json();
+  console.log(`    Response code: ${data.code}, items returned: ${data.data?.list?.length}`);
+  if (data.data?.list?.[0]) {
+    const v = data.data.list[0];
+    console.log(`    Must-Watch Video: [${v.bvid}] ${v.title} (achievement: ${v.achievement})`);
+  }
+}
+
+async function testRecommend() {
+  console.log(`\n[5] Testing Recommend Feed API (首页推荐)...`);
+  const res = await fetch('https://api.bilibili.com/x/web-interface/index/top/feed/rcmd?ps=5&fresh_idx=1', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Referer': 'https://www.bilibili.com/'
+    }
+  });
+  const data = await res.json();
+  console.log(`    Response code: ${data.code}, items returned: ${data.data?.item?.length}`);
+  if (data.data?.item?.[0]) {
+    const v = data.data.item[0];
+    console.log(`    Recommended Video: [${v.bvid}] ${v.title} by ${v.owner?.name}`);
+  }
+}
+
 async function testPlayUrl(bvid, cid) {
-  console.log(`\n[3] Testing Play URL API for [${bvid}], cid=${cid}...`);
+  console.log(`\n[6] Testing Play URL API for [${bvid}], cid=${cid}...`);
   const res = await fetch(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=64&fnval=1`, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -53,7 +101,7 @@ async function testPlayUrl(bvid, cid) {
 }
 
 async function testQrLogin() {
-  console.log(`\n[4] Testing QR Code Login Generation...`);
+  console.log(`\n[7] Testing QR Code Login Generation...`);
   const res = await fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate', {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -67,6 +115,9 @@ async function testQrLogin() {
 async function main() {
   await checkCdp();
   const v = await testPopular();
+  await testRanking();
+  await testPrecious();
+  await testRecommend();
   if (v) {
     await testPlayUrl(v.bvid, v.cid);
   }

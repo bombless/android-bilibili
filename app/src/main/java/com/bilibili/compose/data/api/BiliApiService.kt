@@ -13,6 +13,24 @@ interface BiliApiService {
         @Query("ps") pageSize: Int = 20
     ): BiliResponse<PopularData>
 
+    @GET("x/web-interface/index/top/feed/rcmd")
+    suspend fun getRecommendVideos(
+        @Query("ps") pageSize: Int = 10,
+        @Query("fresh_idx") freshIdx: Int = 1
+    ): BiliResponse<RcmdData>
+
+    @GET("x/web-interface/ranking")
+    suspend fun getRankingVideos(
+        @Query("rid") rid: Int = 0,
+        @Query("day") day: Int = 3
+    ): BiliResponse<RankingData>
+
+    @GET("x/web-interface/popular/precious")
+    suspend fun getPreciousVideos(
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 50
+    ): BiliResponse<PreciousData>
+
     @GET("x/web-interface/view")
     suspend fun getVideoView(
         @Query("bvid") bvid: String

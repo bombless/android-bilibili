@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Subtitles
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -22,7 +23,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.bilibili.compose.data.model.VideoItem
 import com.bilibili.compose.ui.theme.BiliPink
-import com.bilibili.compose.ui.theme.TextMuted
 import com.bilibili.compose.ui.theme.TextPrimary
 import com.bilibili.compose.ui.theme.TextSecondary
 import com.bilibili.compose.util.FormatUtils
@@ -56,6 +56,29 @@ fun VideoCard(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
+
+                // Optional Rank Badge on Top-Left
+                if (video.rank != null && video.rank > 0) {
+                    val (rankBg, rankText) = when (video.rank) {
+                        1 -> Color(0xFFFFB800) to "TOP 1"
+                        2 -> Color(0xFF9E9E9E) to "TOP 2"
+                        3 -> Color(0xFFCD7F32) to "TOP 3"
+                        else -> Color(0xCC333333) to "#${video.rank}"
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(bottomEnd = 8.dp),
+                        color = rankBg,
+                        modifier = Modifier.align(Alignment.TopStart)
+                    ) {
+                        Text(
+                            text = rankText,
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                        )
+                    }
+                }
 
                 // Dark gradient overlay at bottom of thumbnail
                 Box(
@@ -153,7 +176,7 @@ fun VideoCard(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // UP info & Rcmd reason
+                // UP info & Rcmd/Achievement reason
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -178,7 +201,7 @@ fun VideoCard(
                         }
 
                         Text(
-                            text = video.owner?.name ?: "未知UP主",
+                            text = video.owner?.name?.ifBlank { null } ?: "未知UP主",
                             color = TextSecondary,
                             fontSize = 12.sp,
                             maxLines = 1,
@@ -186,13 +209,43 @@ fun VideoCard(
                         )
                     }
 
-                    video.rcmdReason?.content?.takeIf { it.isNotBlank() }?.let { reason ->
+                    // Achievement tag (入站必刷)
+                    if (!video.achievement.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(3.dp),
+                            color = Color(0xFFFFF3E0),
+                            modifier = Modifier.padding(start = 6.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFF9800),
+                                    modifier = Modifier.size(10.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = video.achievement,
+                                    color = Color(0xFFE65100),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    } else if (video.rcmdReason?.content?.isNotBlank() == true) {
+                        // Rcmd tag (综合热门)
                         Surface(
                             shape = RoundedCornerShape(2.dp),
-                            color = Color(0xFFFFECE6)
+                            color = Color(0xFFFFECE6),
+                            modifier = Modifier.padding(start = 6.dp)
                         ) {
                             Text(
-                                text = reason,
+                                text = video.rcmdReason.content,
                                 color = Color(0xFFFF6600),
                                 fontSize = 10.sp,
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)

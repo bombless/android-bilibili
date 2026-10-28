@@ -8,8 +8,14 @@
 
 ## 🌟 功能特性
 
-### 1. 首页热门视频推荐 (`HomeScreen`)
-- 采用 B 站官方推荐/热门 API (`/x/web-interface/popular`)，分页无限加载；
+### 1. 首页视频推荐与热门专区 (`HomeScreen` & `PopularScreen`)
+- **首页推荐流 (`HomeScreen`)**：
+  - 采用 B 站官方推荐 API (`/x/web-interface/index/top/feed/rcmd`)，智能无限下拉流；
+  - 顶部显著位置提供“热门”胶囊入口按钮（带火焰标识），点击无缝跳转至独立热门专区；
+- **热门专区 (`PopularScreen`)**：
+  - **综合热门**：采用 `/x/web-interface/popular`，支持分页与无限加载，展示热度标签（如“人气飙升”、“万赞”等）；
+  - **排行榜**：采用 `/x/web-interface/ranking`，展示全站 TOP 100 排行，并区分金银铜牌（TOP 1/2/3）专属高光标识；
+  - **入站必刷**：采用 `/x/web-interface/popular/precious`，收录全网经典殿堂级作品，突出展示专属成就勋章；
 - 视频卡片优雅展示：16:9 高清封面（自动处理 Anti-Hotlink 鉴权防盗链）、播放量与弹幕数统计、视频时长标签、UP主信息标签；
 - 支持下拉刷新与滑到底部自动加载更多。
 
