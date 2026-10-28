@@ -1,6 +1,14 @@
 package com.bilibili.compose.data.model
 
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
+import java.lang.reflect.Type
 
 enum class PopularTab(val title: String) {
     OVERALL("综合热门"),
@@ -64,10 +72,42 @@ data class Stat(
     val like: Long = 0
 )
 
+@JsonAdapter(RcmdReasonAdapter::class)
 data class RcmdReason(
     @SerializedName("content")
     val content: String = ""
 )
+
+class RcmdReasonAdapter : JsonDeserializer<RcmdReason>, JsonSerializer<RcmdReason> {
+    override fun deserialize(
+        json: JsonElement?,
+        typeOfT: Type?,
+        context: JsonDeserializationContext?
+    ): RcmdReason? {
+        if (json == null || json.isJsonNull) return null
+        if (json.isJsonObject) {
+            val content = json.asJsonObject.get("content")?.asString ?: ""
+            return if (content.isNotBlank()) RcmdReason(content) else null
+        }
+        if (json.isJsonPrimitive) {
+            val str = json.asString
+            return if (str.isNotBlank()) RcmdReason(str) else null
+        }
+        return null
+    }
+
+    override fun serialize(
+        src: RcmdReason?,
+        typeOfSrc: Type?,
+        context: JsonSerializationContext?
+    ): JsonElement {
+        val obj = JsonObject()
+        if (src != null && src.content.isNotBlank()) {
+            obj.addProperty("content", src.content)
+        }
+        return obj
+    }
+}
 
 data class PopularData(
     @SerializedName("list")

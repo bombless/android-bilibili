@@ -1,5 +1,6 @@
 package com.bilibili.compose.ui.player
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bilibili.compose.data.model.ReplyItem
@@ -24,6 +25,8 @@ data class PlayerUiState(
     val isLoadingDetail: Boolean = false,
     val isLoadingStream: Boolean = false,
     val isLoadingComments: Boolean = false,
+    val isLoadingRelated: Boolean = false,
+    val relatedError: String? = null,
     val errorMessage: String? = null,
     val selectedTab: Int = 0 // 0: Related, 1: Comments
 )
@@ -107,10 +110,27 @@ class PlayerViewModel(private val videoRepository: VideoRepository) : ViewModel(
 
     private fun loadRelatedVideos(bvid: String) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingRelated = true, relatedError = null)
             val result = videoRepository.getRelatedVideos(bvid)
             result.onSuccess { list ->
-                _uiState.value = _uiState.value.copy(relatedVideos = list)
+                _uiState.value = _uiState.value.copy(
+                    relatedVideos = list.distinctBy { it.bvid.ifBlank { it.aid.toString() } },
+                    isLoadingRelated = false
+                )
+            }.onFailure { error ->
+                Log.e("PlayerViewModel", "Failed to load related videos for $bvid: ${error.message}", error)
+                _uiState.value = _uiState.value.copy(
+                    isLoadingRelated = false,
+                    relatedError = error.localizedMessage ?: "加载相关推荐失败"
+                )
             }
+        }
+    }
+
+    fun reloadRelatedVideos() {
+        val bvid = _uiState.value.bvid
+        if (bvid.isNotBlank()) {
+            loadRelatedVideos(bvid)
         }
     }
 

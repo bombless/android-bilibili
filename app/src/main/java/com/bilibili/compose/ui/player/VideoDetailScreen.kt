@@ -138,7 +138,7 @@ fun VideoDetailScreen(
 
                 if (uiState.selectedTab == 0) {
                     // Related Videos list
-                    if (uiState.relatedVideos.isEmpty()) {
+                    if (uiState.isLoadingRelated && uiState.relatedVideos.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
@@ -152,10 +152,46 @@ fun VideoDetailScreen(
                                 )
                             }
                         }
+                    } else if (uiState.relatedError != null && uiState.relatedVideos.isEmpty()) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = uiState.relatedError ?: "加载推荐失败",
+                                    color = TextSecondary,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedButton(
+                                    onClick = { viewModel.reloadRelatedVideos() }
+                                ) {
+                                    Text(text = "重试", color = BiliPink)
+                                }
+                            }
+                        }
+                    } else if (uiState.relatedVideos.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "暂无相关推荐",
+                                    color = TextSecondary,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
                     } else {
                         items(
                             items = uiState.relatedVideos,
-                            key = { it.bvid }
+                            key = { it.bvid.ifBlank { it.aid.toString() } }
                         ) { video ->
                             Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                                 VideoCard(

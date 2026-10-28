@@ -1,5 +1,6 @@
 package com.bilibili.compose.data.repository
 
+import android.util.Log
 import com.bilibili.compose.data.api.BiliApiService
 import com.bilibili.compose.data.model.*
 import kotlinx.coroutines.Dispatchers
@@ -95,9 +96,12 @@ class VideoRepository(private val apiService: BiliApiService) {
             if (response.isSuccess && response.data != null) {
                 Result.success(response.data)
             } else {
-                Result.failure(Exception(response.message.ifBlank { "获取推荐视频失败" }))
+                val errorMsg = response.message.ifBlank { "获取推荐视频失败" }
+                Log.w("VideoRepository", "getRelatedVideos failed for $bvid: code=${response.code}, msg=$errorMsg")
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
+            Log.e("VideoRepository", "getRelatedVideos exception for $bvid", e)
             Result.failure(e)
         }
     }

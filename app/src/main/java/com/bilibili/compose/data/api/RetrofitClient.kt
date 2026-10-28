@@ -1,6 +1,10 @@
 package com.bilibili.compose.data.api
 
 import com.bilibili.compose.data.local.UserSessionStore
+import com.bilibili.compose.data.model.RcmdReason
+import com.bilibili.compose.data.model.RcmdReasonAdapter
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -39,11 +43,15 @@ class RetrofitClient(private val sessionStore: UserSessionStore) {
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
 
+    val gson: Gson = GsonBuilder()
+        .registerTypeAdapter(RcmdReason::class.java, RcmdReasonAdapter())
+        .create()
+
     val apiService: BiliApiService by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.bilibili.com/")
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
             .create(BiliApiService::class.java)
     }
@@ -52,7 +60,7 @@ class RetrofitClient(private val sessionStore: UserSessionStore) {
         Retrofit.Builder()
             .baseUrl("https://passport.bilibili.com/")
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
             .create(BiliPassportService::class.java)
     }
