@@ -59,6 +59,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     var showCdpDialog by remember { mutableStateOf(false) }
     var showAiServerDialog by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
 
     // Infinite scroll detection
     val shouldLoadMore = remember {
@@ -139,27 +140,27 @@ fun HomeScreen(
                             }
                         }
 
-                        // 动态 Capsule button
+                        // 历史 Capsule button
                         Surface(
                             shape = CircleShape,
                             color = BiliPink.copy(alpha = 0.12f),
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .clickable(onClick = onDynamicClick)
+                                .clickable(onClick = onHistoryClick)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.DynamicFeed,
-                                    contentDescription = "动态",
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = "历史记录",
                                     tint = BiliPink,
                                     modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
-                                    text = "动态",
+                                    text = "历史",
                                     color = BiliPink,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
@@ -169,53 +170,60 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onHistoryClick) {
-                        Icon(Icons.Default.History, contentDescription = "历史记录", tint = BiliPink)
-                    }
-                    // AI Server Settings Dialog button
-                    IconButton(onClick = { showAiServerDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.SmartToy,
-                            contentDescription = "AI服务配置",
-                            tint = if (uiState.isAiMode) BiliPink else TextSecondary
-                        )
-                    }
-
-                    // CDP Protocol Debug Button
-                    IconButton(onClick = { showCdpDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = "CDP状态",
-                            tint = TextSecondary
-                        )
-                    }
-
-                    // Refresh Button
-                    IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "刷新",
-                            tint = TextSecondary
-                        )
-                    }
-
-                    // User Avatar Button
-                    IconButton(onClick = onProfileClick) {
-                        if (isLoggedIn && userNav?.face?.isNotBlank() == true) {
-                            AsyncImage(
-                                model = userNav?.face,
-                                contentDescription = "用户头像",
+                    // Pink-dot entry for secondary actions
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .clickable { showMoreMenu = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
                                 modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
+                                    .size(9.dp)
+                                    .background(BiliPink, CircleShape)
                             )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "登录/个人中心",
-                                tint = BiliPink,
-                                modifier = Modifier.size(32.dp)
+                        }
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("动态") },
+                                leadingIcon = { Icon(Icons.Default.DynamicFeed, contentDescription = null, tint = BiliPink) },
+                                onClick = { showMoreMenu = false; onDynamicClick() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("AI服务配置") },
+                                leadingIcon = { Icon(Icons.Default.SmartToy, contentDescription = null, tint = if (uiState.isAiMode) BiliPink else TextSecondary) },
+                                onClick = { showMoreMenu = false; showAiServerDialog = true }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("CDP状态") },
+                                leadingIcon = { Icon(Icons.Default.Language, contentDescription = null, tint = TextSecondary) },
+                                onClick = { showMoreMenu = false; showCdpDialog = true }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("刷新") },
+                                leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null, tint = TextSecondary) },
+                                onClick = { showMoreMenu = false; viewModel.refresh() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(if (isLoggedIn) "个人中心" else "登录/个人中心") },
+                                leadingIcon = {
+                                    if (isLoggedIn && userNav?.face?.isNotBlank() == true) {
+                                        AsyncImage(
+                                            model = userNav?.face,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(24.dp).clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.AccountCircle, contentDescription = null, tint = BiliPink)
+                                    }
+                                },
+                                onClick = { showMoreMenu = false; onProfileClick() }
                             )
                         }
                     }
