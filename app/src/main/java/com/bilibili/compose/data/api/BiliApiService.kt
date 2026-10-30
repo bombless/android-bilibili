@@ -7,6 +7,15 @@ import retrofit2.http.Query
 
 interface BiliApiService {
 
+    @GET("x/web-interface/history/cursor")
+    suspend fun getHistoryCursor(
+        @Query("max") max: Long = 0,
+        @Query("view_at") viewAt: Long = 0,
+        @Query("business") business: String = "",
+        @Query("ps") pageSize: Int = 20,
+        @Query("type") type: String = "all"
+    ): BiliResponse<HistoryData>
+
     @GET("x/web-interface/popular")
     suspend fun getPopularVideos(
         @Query("pn") page: Int,

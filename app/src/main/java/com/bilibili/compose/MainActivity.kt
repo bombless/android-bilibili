@@ -18,6 +18,8 @@ import com.bilibili.compose.ui.dynamic.DynamicScreen
 import com.bilibili.compose.ui.dynamic.DynamicViewModel
 import com.bilibili.compose.ui.home.HomeScreen
 import com.bilibili.compose.ui.home.HomeViewModel
+import com.bilibili.compose.ui.history.HistoryScreen
+import com.bilibili.compose.ui.history.HistoryViewModel
 import com.bilibili.compose.ui.login.LoginScreen
 import com.bilibili.compose.ui.login.LoginViewModel
 import com.bilibili.compose.ui.navigation.Screen
@@ -73,6 +75,22 @@ fun BiliNavHost() {
                 },
                 onDynamicClick = {
                     navController.navigate(Screen.Dynamic.route)
+                },
+                onHistoryClick = {
+                    navController.navigate(Screen.History.route)
+                }
+            )
+        }
+
+        composable(Screen.History.route) {
+            val historyViewModel: HistoryViewModel = viewModel {
+                HistoryViewModel(app.videoRepository)
+            }
+            HistoryScreen(
+                viewModel = historyViewModel,
+                onBackClick = { navController.popBackStack() },
+                onVideoClick = { bvid ->
+                    navController.navigate(Screen.VideoDetail.createRoute(bvid))
                 }
             )
         }

@@ -20,6 +20,25 @@ class VideoRepository(
         .create()
 ) {
 
+    suspend fun getHistory(
+        max: Long = 0,
+        viewAt: Long = 0,
+        business: String = "",
+        type: String = "all",
+        pageSize: Int = 20
+    ): Result<HistoryData> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getHistoryCursor(max, viewAt, business, pageSize, type)
+            if (response.isSuccess && response.data != null) {
+                Result.success(response.data)
+            } else {
+                Result.failure(Exception(response.message.ifBlank { "获取历史记录失败" }))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getPopularVideos(page: Int, pageSize: Int = 20): Result<List<VideoItem>> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.getPopularVideos(page, pageSize)

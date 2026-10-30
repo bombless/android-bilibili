@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DynamicFeed
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SmartToy
@@ -47,6 +48,7 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onPopularClick: () -> Unit,
     onDynamicClick: () -> Unit = {},
+    onHistoryClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -167,6 +169,9 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onHistoryClick) {
+                        Icon(Icons.Default.History, contentDescription = "历史记录", tint = BiliPink)
+                    }
                     // AI Server Settings Dialog button
                     IconButton(onClick = { showAiServerDialog = true }) {
                         Icon(
