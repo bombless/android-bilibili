@@ -49,14 +49,23 @@ interface BiliApiService {
         @Query("bvid") bvid: String
     ): BiliResponse<List<VideoItem>>
 
-    @GET("x/v2/reply")
+    @GET("x/v2/reply/main")
     suspend fun getVideoReplies(
         @Query("type") type: Int = 1,
         @Query("oid") aid: Long,
-        @Query("pn") page: Int = 1,
-        @Query("ps") pageSize: Int = 20,
-        @Query("sort") sort: Int = 2
+        @Query("mode") mode: Int = 3,
+        @Query("next") next: Long = 0,
+        @Query("ps") pageSize: Int = 20
     ): BiliResponse<ReplyData>
+
+    @GET("x/v2/reply/reply")
+    suspend fun getSubReplies(
+        @Query("type") type: Int = 1,
+        @Query("oid") aid: Long,
+        @Query("root") rootRpid: Long,
+        @Query("pn") page: Int = 1,
+        @Query("ps") pageSize: Int = 20
+    ): BiliResponse<SubReplyData>
 
     @GET("x/web-interface/nav")
     suspend fun getNav(): BiliResponse<NavData>

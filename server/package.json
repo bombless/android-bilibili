@@ -1,0 +1,26 @@
+{
+  "name": "bilibili-ai-recommender-server",
+  "version": "1.0.0",
+  "description": "Bilibili AI Video Recommendation Service with Chat Completions and Unlogged-in Video Pipeline",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "bilibili",
+    "ai",
+    "recommendation",
+    "chat-completions",
+    "android"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4"
+  }
+}

@@ -3,12 +3,33 @@ package com.bilibili.compose.data.model
 import com.google.gson.annotations.SerializedName
 
 data class ReplyData(
+    @SerializedName("cursor")
+    val cursor: ReplyCursor? = null,
     @SerializedName("page")
     val page: ReplyPage? = null,
     @SerializedName("replies")
     val replies: List<ReplyItem>? = emptyList(),
+    @SerializedName("top_replies")
+    val topReplies: List<ReplyItem>? = emptyList(),
     @SerializedName("top")
     val top: ReplyTop? = null
+)
+
+data class ReplyCursor(
+    @SerializedName("is_begin")
+    val isBegin: Boolean = true,
+    @SerializedName("prev")
+    val prev: Long = 0,
+    @SerializedName("next")
+    val next: Long = 0,
+    @SerializedName("is_end")
+    val isEnd: Boolean = false,
+    @SerializedName("mode")
+    val mode: Int = 3,
+    @SerializedName("all_count")
+    val allCount: Int = 0,
+    @SerializedName("name")
+    val name: String = ""
 )
 
 data class ReplyPage(
@@ -23,6 +44,15 @@ data class ReplyPage(
 data class ReplyTop(
     @SerializedName("upper")
     val upper: ReplyItem? = null
+)
+
+data class SubReplyData(
+    @SerializedName("page")
+    val page: ReplyPage? = null,
+    @SerializedName("root")
+    val root: ReplyItem? = null,
+    @SerializedName("replies")
+    val replies: List<ReplyItem>? = emptyList()
 )
 
 data class ReplyItem(
@@ -49,7 +79,21 @@ data class ReplyItem(
     @SerializedName("member")
     val member: ReplyMember? = null,
     @SerializedName("content")
-    val content: ReplyContent? = null
+    val content: ReplyContent? = null,
+    @SerializedName("replies")
+    val replies: List<ReplyItem>? = null,
+    @SerializedName("reply_control")
+    val replyControl: ReplyControl? = null,
+    var isTop: Boolean = false
+)
+
+data class ReplyControl(
+    @SerializedName("time_desc")
+    val timeDesc: String? = null,
+    @SerializedName("sub_reply_entry_text")
+    val subReplyEntryText: String? = null,
+    @SerializedName("sub_reply_title_text")
+    val subReplyTitleText: String? = null
 )
 
 data class ReplyMember(
@@ -62,7 +106,20 @@ data class ReplyMember(
     @SerializedName("sign")
     val sign: String = "",
     @SerializedName("avatar")
-    val avatar: String = ""
+    val avatar: String = "",
+    @SerializedName("level_info")
+    val levelInfo: LevelInfo? = null,
+    @SerializedName("vip")
+    val vip: ReplyVip? = null
+)
+
+data class ReplyVip(
+    @SerializedName("vipType")
+    val vipType: Int = 0,
+    @SerializedName("vipStatus")
+    val vipStatus: Int = 0,
+    @SerializedName("nickname_color")
+    val nicknameColor: String = ""
 )
 
 data class ReplyContent(

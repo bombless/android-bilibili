@@ -33,3 +33,7 @@ gen/
 out/
 app/build/
 build/
+
+# Local server environment and installed dependencies
+server/.env
+server/node_modules/

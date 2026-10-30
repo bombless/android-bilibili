@@ -22,13 +22,28 @@ data class PlayerUiState(
     val selectedQuality: Int = 64,
     val relatedVideos: List<VideoItem> = emptyList(),
     val comments: List<ReplyItem> = emptyList(),
+    val commentsTotalCount: Int = 0,
+    val commentsNextCursor: Long = 0,
+    val commentsHasMore: Boolean = true,
+    val commentsMode: Int = 3, // 3: 最热, 2: 最新
     val isLoadingDetail: Boolean = false,
     val isLoadingStream: Boolean = false,
     val isLoadingComments: Boolean = false,
+    val isLoadingMoreComments: Boolean = false,
+    val commentsError: String? = null,
     val isLoadingRelated: Boolean = false,
     val relatedError: String? = null,
     val errorMessage: String? = null,
-    val selectedTab: Int = 0 // 0: Related, 1: Comments
+    val selectedTab: Int = 0, // 0: Related, 1: Comments
+    val activeRootComment: ReplyItem? = null,
+    val subReplies: List<ReplyItem> = emptyList(),
+    val subRepliesPage: Int = 1,
+    val subRepliesTotalCount: Int = 0,
+    val subRepliesHasMore: Boolean = true,
+    val isLoadingSubReplies: Boolean = false,
+    val isLoadingMoreSubReplies: Boolean = false,
+    val subRepliesError: String? = null,
+    val showSubRepliesSheet: Boolean = false
 )
 
 class PlayerViewModel(private val videoRepository: VideoRepository) : ViewModel() {
@@ -46,9 +61,11 @@ class PlayerViewModel(private val videoRepository: VideoRepository) : ViewModel(
             val detailResult = videoRepository.getVideoDetail(bvid)
             detailResult.onSuccess { detail ->
                 val cid = detail.cid.takeIf { it > 0 } ?: (detail.pages.firstOrNull()?.cid ?: 0)
+                val totalComments = detail.stat?.reply?.toInt() ?: 0
                 _uiState.value = _uiState.value.copy(
                     videoDetail = detail,
                     selectedCid = cid,
+                    commentsTotalCount = totalComments,
                     isLoadingDetail = false
                 )
 
@@ -61,7 +78,7 @@ class PlayerViewModel(private val videoRepository: VideoRepository) : ViewModel(
                 loadRelatedVideos(bvid)
 
                 // 4. Fetch Comments
-                loadComments(detail.aid)
+                loadComments(detail.aid, isRefresh = true)
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isLoadingDetail = false,
@@ -134,19 +151,170 @@ class PlayerViewModel(private val videoRepository: VideoRepository) : ViewModel(
         }
     }
 
-    private fun loadComments(aid: Long) {
+    fun loadComments(aid: Long = 0, isRefresh: Boolean = true) {
+        val targetAid = if (aid > 0) aid else (_uiState.value.videoDetail?.aid ?: return)
+
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoadingComments = true)
-            val result = videoRepository.getVideoReplies(aid, page = 1)
-            result.onSuccess { replyData ->
+            if (isRefresh) {
                 _uiState.value = _uiState.value.copy(
-                    comments = replyData.replies ?: emptyList(),
-                    isLoadingComments = false
+                    isLoadingComments = true,
+                    commentsError = null,
+                    commentsNextCursor = 0,
+                    commentsHasMore = true
                 )
-            }.onFailure {
-                _uiState.value = _uiState.value.copy(isLoadingComments = false)
+            } else {
+                if (_uiState.value.isLoadingComments || _uiState.value.isLoadingMoreComments || !_uiState.value.commentsHasMore) {
+                    return@launch
+                }
+                _uiState.value = _uiState.value.copy(
+                    isLoadingMoreComments = true,
+                    commentsError = null
+                )
+            }
+
+            val nextCursor = if (isRefresh) 0L else _uiState.value.commentsNextCursor
+            val mode = _uiState.value.commentsMode
+
+            val result = videoRepository.getVideoReplies(
+                aid = targetAid,
+                next = nextCursor,
+                mode = mode
+            )
+
+            result.onSuccess { replyData ->
+                val topList = if (isRefresh) {
+                    (replyData.topReplies ?: emptyList()).map { it.copy(isTop = true) }
+                } else {
+                    emptyList()
+                }
+                val newReplies = replyData.replies ?: emptyList()
+                val cursor = replyData.cursor
+
+                val updatedComments = if (isRefresh) {
+                    (topList + newReplies).distinctBy { it.rpid }
+                } else {
+                    (_uiState.value.comments + newReplies).distinctBy { it.rpid }
+                }
+
+                val hasMore = if (cursor != null) {
+                    !cursor.isEnd && newReplies.isNotEmpty()
+                } else {
+                    newReplies.isNotEmpty()
+                }
+
+                val next = cursor?.next ?: (nextCursor + 1)
+                val totalCount = cursor?.allCount?.takeIf { it > 0 }
+                    ?: (_uiState.value.videoDetail?.stat?.reply?.toInt() ?: updatedComments.size)
+
+                _uiState.value = _uiState.value.copy(
+                    comments = updatedComments,
+                    commentsTotalCount = totalCount,
+                    commentsNextCursor = next,
+                    commentsHasMore = hasMore,
+                    isLoadingComments = false,
+                    isLoadingMoreComments = false
+                )
+            }.onFailure { error ->
+                Log.e("PlayerViewModel", "Failed to load replies for aid=$targetAid", error)
+                _uiState.value = _uiState.value.copy(
+                    isLoadingComments = false,
+                    isLoadingMoreComments = false,
+                    commentsError = error.localizedMessage ?: "加载评论失败"
+                )
             }
         }
+    }
+
+    fun loadMoreComments() {
+        val aid = _uiState.value.videoDetail?.aid ?: return
+        loadComments(aid = aid, isRefresh = false)
+    }
+
+    fun setCommentsMode(mode: Int) {
+        if (_uiState.value.commentsMode == mode) return
+        _uiState.value = _uiState.value.copy(commentsMode = mode)
+        val aid = _uiState.value.videoDetail?.aid ?: return
+        loadComments(aid = aid, isRefresh = true)
+    }
+
+    fun openSubReplies(comment: ReplyItem) {
+        _uiState.value = _uiState.value.copy(
+            activeRootComment = comment,
+            subReplies = comment.replies ?: emptyList(),
+            subRepliesPage = 1,
+            subRepliesTotalCount = comment.rcount,
+            subRepliesHasMore = true,
+            isLoadingSubReplies = true,
+            subRepliesError = null,
+            showSubRepliesSheet = true
+        )
+        loadSubReplies(comment.rpid, page = 1, isRefresh = true)
+    }
+
+    fun closeSubReplies() {
+        _uiState.value = _uiState.value.copy(
+            showSubRepliesSheet = false,
+            activeRootComment = null,
+            subReplies = emptyList(),
+            isLoadingSubReplies = false,
+            isLoadingMoreSubReplies = false,
+            subRepliesError = null
+        )
+    }
+
+    fun loadSubReplies(rootRpid: Long, page: Int = 1, isRefresh: Boolean = false) {
+        val aid = _uiState.value.videoDetail?.aid ?: return
+        viewModelScope.launch {
+            if (isRefresh) {
+                _uiState.value = _uiState.value.copy(
+                    isLoadingSubReplies = true,
+                    subRepliesError = null
+                )
+            } else {
+                if (_uiState.value.isLoadingSubReplies || _uiState.value.isLoadingMoreSubReplies || !_uiState.value.subRepliesHasMore) {
+                    return@launch
+                }
+                _uiState.value = _uiState.value.copy(
+                    isLoadingMoreSubReplies = true,
+                    subRepliesError = null
+                )
+            }
+
+            val result = videoRepository.getSubReplies(aid, rootRpid, page = page)
+            result.onSuccess { data ->
+                val newReplies = data.replies ?: emptyList()
+                val merged = if (isRefresh) {
+                    newReplies
+                } else {
+                    (_uiState.value.subReplies + newReplies).distinctBy { it.rpid }
+                }
+                val total = data.page?.count ?: _uiState.value.subRepliesTotalCount
+                val hasMore = newReplies.isNotEmpty() && (merged.size < total)
+
+                _uiState.value = _uiState.value.copy(
+                    activeRootComment = data.root ?: _uiState.value.activeRootComment,
+                    subReplies = merged,
+                    subRepliesPage = page,
+                    subRepliesTotalCount = total,
+                    subRepliesHasMore = hasMore,
+                    isLoadingSubReplies = false,
+                    isLoadingMoreSubReplies = false
+                )
+            }.onFailure { e ->
+                Log.e("PlayerViewModel", "Failed to load sub-replies for rootRpid=$rootRpid", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoadingSubReplies = false,
+                    isLoadingMoreSubReplies = false,
+                    subRepliesError = e.localizedMessage ?: "加载回复失败"
+                )
+            }
+        }
+    }
+
+    fun loadMoreSubReplies() {
+        val rootRpid = _uiState.value.activeRootComment?.rpid ?: return
+        val nextPage = _uiState.value.subRepliesPage + 1
+        loadSubReplies(rootRpid, page = nextPage, isRefresh = false)
     }
 
     fun retry() {

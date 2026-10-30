@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -14,13 +15,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bilibili.compose.ui.home.components.VideoCard
-import com.bilibili.compose.ui.player.components.CommentsSection
+import com.bilibili.compose.ui.player.components.CommentItemView
+import com.bilibili.compose.ui.player.components.CommentsFooter
+import com.bilibili.compose.ui.player.components.CommentsHeader
+import com.bilibili.compose.ui.player.components.SubRepliesBottomSheet
 import com.bilibili.compose.ui.player.components.VideoInfoSection
 import com.bilibili.compose.ui.player.components.VideoPartsSection
 import com.bilibili.compose.ui.player.components.VideoPlayerView
 import com.bilibili.compose.ui.theme.BiliPink
 import com.bilibili.compose.ui.theme.TextPrimary
 import com.bilibili.compose.ui.theme.TextSecondary
+import com.bilibili.compose.util.FormatUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,9 +37,26 @@ fun VideoDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val lazyListState = rememberLazyListState()
 
     LaunchedEffect(bvid) {
         viewModel.loadVideo(bvid)
+    }
+
+    // Auto load more comments when reaching bottom of comment list
+    val shouldLoadMoreComments = remember {
+        derivedStateOf {
+            val total = lazyListState.layoutInfo.totalItemsCount
+            val lastVisible = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total > 0 && lastVisible >= total - 3
+        }
+    }
+
+    LaunchedEffect(shouldLoadMoreComments.value, uiState.selectedTab) {
+        if (shouldLoadMoreComments.value && uiState.selectedTab == 1 &&
+            !uiState.isLoadingComments && !uiState.isLoadingMoreComments && uiState.commentsHasMore) {
+            viewModel.loadMoreComments()
+        }
     }
 
     Scaffold(
@@ -80,6 +102,7 @@ fun VideoDetailScreen(
 
             // 2. Video Content Body (Scrollable)
             LazyColumn(
+                state = lazyListState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -127,8 +150,15 @@ fun VideoDetailScreen(
                             selected = uiState.selectedTab == 1,
                             onClick = { viewModel.setTab(1) },
                             text = {
+                                val countText = if (uiState.commentsTotalCount > 0) {
+                                    " (${FormatUtils.formatCount(uiState.commentsTotalCount.toLong())})"
+                                } else if (uiState.comments.isNotEmpty()) {
+                                    " (${uiState.comments.size})"
+                                } else {
+                                    ""
+                                }
                                 Text(
-                                    text = "评论 (${uiState.comments.size})",
+                                    text = "评论$countText",
                                     color = if (uiState.selectedTab == 1) BiliPink else TextSecondary
                                 )
                             }
@@ -204,13 +234,104 @@ fun VideoDetailScreen(
                 } else {
                     // Comments list
                     item {
-                        CommentsSection(
-                            comments = uiState.comments,
-                            isLoading = uiState.isLoadingComments
+                        CommentsHeader(
+                            totalCount = uiState.commentsTotalCount,
+                            mode = uiState.commentsMode,
+                            onModeChange = { mode -> viewModel.setCommentsMode(mode) }
                         )
+                    }
+
+                    if (uiState.isLoadingComments && uiState.comments.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = BiliPink,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                    } else if (uiState.commentsError != null && uiState.comments.isEmpty()) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = uiState.commentsError ?: "加载评论失败",
+                                    color = TextSecondary,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedButton(
+                                    onClick = { viewModel.loadComments(isRefresh = true) }
+                                ) {
+                                    Text(text = "重试", color = BiliPink)
+                                }
+                            }
+                        }
+                    } else if (uiState.comments.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "暂无评论，快来抢沙发吧~",
+                                    color = TextSecondary,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    } else {
+                        items(
+                            items = uiState.comments,
+                            key = { it.rpid }
+                        ) { comment ->
+                            CommentItemView(
+                                comment = comment,
+                                upMid = uiState.videoDetail?.owner?.mid,
+                                onOpenSubReplies = { targetComment ->
+                                    viewModel.openSubReplies(targetComment)
+                                }
+                            )
+                        }
+
+                        item {
+                            CommentsFooter(
+                                isLoadingMore = uiState.isLoadingMoreComments,
+                                hasMore = uiState.commentsHasMore,
+                                error = uiState.commentsError,
+                                onLoadMore = { viewModel.loadMoreComments() }
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+
+    // Secondary sub-replies bottom sheet
+    if (uiState.showSubRepliesSheet && uiState.activeRootComment != null) {
+        SubRepliesBottomSheet(
+            rootComment = uiState.activeRootComment!!,
+            subReplies = uiState.subReplies,
+            totalCount = uiState.subRepliesTotalCount,
+            isLoading = uiState.isLoadingSubReplies,
+            isLoadingMore = uiState.isLoadingMoreSubReplies,
+            hasMore = uiState.subRepliesHasMore,
+            error = uiState.subRepliesError,
+            upMid = uiState.videoDetail?.owner?.mid,
+            onDismiss = { viewModel.closeSubReplies() },
+            onLoadMore = { viewModel.loadMoreSubReplies() }
+        )
     }
 }

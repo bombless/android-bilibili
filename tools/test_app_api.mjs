@@ -112,8 +112,45 @@ async function testQrLogin() {
   console.log(`    QR Gen code: ${data.code}, key: ${data.data?.qrcode_key}`);
 }
 
+async function testRepliesWithPagination(bvid, aid) {
+  console.log(`\n[8] Testing Video Replies API & Pagination for [${bvid}], aid=${aid}...`);
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Referer': 'https://www.bilibili.com/'
+  };
+
+  // Page 1 (next = 0)
+  const res1 = await fetch(`https://api.bilibili.com/x/v2/reply/main?oid=${aid}&type=1&mode=3&next=0`, { headers });
+  const data1 = await res1.json();
+  const replies1 = data1.data?.replies || [];
+  const cursor1 = data1.data?.cursor;
+  console.log(`    Page 1: code=${data1.code}, replies count: ${replies1.length}, total count: ${cursor1?.all_count}, next cursor: ${cursor1?.next}, is_end: ${cursor1?.is_end}`);
+
+  if (cursor1 && !cursor1.is_end && cursor1.next > 0) {
+    // Page 2 (next = cursor.next)
+    const res2 = await fetch(`https://api.bilibili.com/x/v2/reply/main?oid=${aid}&type=1&mode=3&next=${cursor1.next}`, { headers });
+    const data2 = await res2.json();
+    const replies2 = data2.data?.replies || [];
+    const cursor2 = data2.data?.cursor;
+    console.log(`    Page 2: code=${data2.code}, replies count: ${replies2.length}, next cursor: ${cursor2?.next}, is_end: ${cursor2?.is_end}`);
+    console.log(`    Total loaded across 2 pages: ${replies1.length + replies2.length} comments (breaks past 20 items limit!)`);
+  }
+
+  // Test Sub-replies (replies to a reply)
+  const commentWithSub = replies1.find(r => (r.rcount || 0) > 0);
+  if (commentWithSub) {
+    console.log(`    Testing sub-replies for comment rpid=${commentWithSub.rpid} (by ${commentWithSub.member?.uname}, sub-count: ${commentWithSub.rcount})...`);
+    const subRes = await fetch(`https://api.bilibili.com/x/v2/reply/reply?type=1&oid=${aid}&root=${commentWithSub.rpid}&pn=1&ps=20`, { headers });
+    const subData = await subRes.json();
+    console.log(`    Sub-replies API: code=${subData.code}, items count: ${subData.data?.replies?.length}, total: ${subData.data?.page?.count}`);
+    if (subData.data?.replies?.[0]) {
+      console.log(`      First sub-reply: [${subData.data.replies[0].member?.uname}] ${subData.data.replies[0].content?.message?.slice(0, 30)}`);
+    }
+  }
+}
+
 async function testDynamicWithCdp(pages) {
-  console.log(`\n[8] Testing Dynamic & Creator Filtering with Edge CDP (port 9222)...`);
+  console.log(`\n[9] Testing Dynamic & Creator Filtering with Edge CDP (port 9222)...`);
   const biliPage = pages?.find(p => p.url?.includes('bilibili.com') || p.title?.includes('动态'));
   if (!biliPage || !biliPage.webSocketDebuggerUrl) {
     console.log('    No Bilibili dynamic page found on CDP.');
@@ -175,6 +212,7 @@ async function main() {
   await testRecommend();
   if (v) {
     await testPlayUrl(v.bvid, v.cid);
+    await testRepliesWithPagination(v.bvid, v.aid);
   }
   await testQrLogin();
   if (pages) {

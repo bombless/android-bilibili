@@ -24,6 +24,11 @@ class UserSessionStore(private val context: Context) {
         val KEY_DEDE_USER_ID = stringPreferencesKey("dede_user_id")
         val KEY_DEDE_USER_ID_MD5 = stringPreferencesKey("dede_user_id_md5")
         val KEY_USER_NAV = stringPreferencesKey("user_nav_json")
+        val KEY_AI_SERVER_URL = stringPreferencesKey("ai_server_url")
+    }
+
+    val aiServerUrlFlow: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[KEY_AI_SERVER_URL]?.takeIf { it.isNotBlank() } ?: "http://10.0.2.2:3000"
     }
 
     val sessdataFlow: Flow<String?> = context.dataStore.data.map { prefs ->
@@ -111,6 +116,17 @@ class UserSessionStore(private val context: Context) {
             prefs.remove(KEY_DEDE_USER_ID)
             prefs.remove(KEY_DEDE_USER_ID_MD5)
             prefs.remove(KEY_USER_NAV)
+        }
+    }
+
+    suspend fun getAiServerUrl(): String {
+        val prefs = context.dataStore.data.first()
+        return prefs[KEY_AI_SERVER_URL]?.takeIf { it.isNotBlank() } ?: "http://10.0.2.2:3000"
+    }
+
+    suspend fun saveAiServerUrl(url: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AI_SERVER_URL] = url.trim()
         }
     }
 }
