@@ -36,6 +36,10 @@ import com.bilibili.compose.util.FormatUtils
 @Composable
 fun VideoInfoSection(
     video: VideoViewData,
+    isFollowing: Boolean? = null,
+    isUpdatingFollow: Boolean = false,
+    followError: String? = null,
+    onFollowClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isDescExpanded by remember { mutableStateOf(false) }
@@ -79,17 +83,27 @@ fun VideoInfoSection(
 
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = BiliPink,
-                modifier = Modifier.clickable { /* Follow */ }
+                color = if (isFollowing == true) MaterialTheme.colorScheme.surfaceVariant else BiliPink,
+                modifier = Modifier.clickable(enabled = !isUpdatingFollow && isFollowing != null, onClick = onFollowClick)
             ) {
-                Text(
-                    text = "+ 关注",
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (isUpdatingFollow) CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
+                    Text(
+                        text = when { isUpdatingFollow -> "处理中"; isFollowing == null -> "加载中"; isFollowing -> "已关注"; else -> "+ 关注" },
+                        color = if (isFollowing == true) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
+        }
+
+        followError?.let { error ->
+            Text(text = error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
         }
 
         Spacer(modifier = Modifier.height(12.dp))

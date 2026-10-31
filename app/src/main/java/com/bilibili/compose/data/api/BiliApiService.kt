@@ -4,6 +4,9 @@ import com.bilibili.compose.data.model.*
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Query
+import retrofit2.http.FormUrlEncoded
+import retrofit2.http.Field
+import retrofit2.http.POST
 
 interface BiliApiService {
 
@@ -44,6 +47,18 @@ interface BiliApiService {
     suspend fun getVideoView(
         @Query("bvid") bvid: String
     ): BiliResponse<VideoViewData>
+
+    @GET("x/relation")
+    suspend fun getUserRelation(@Query("fid") mid: Long): BiliResponse<UserRelationData>
+
+    @FormUrlEncoded
+    @POST("x/relation/modify")
+    suspend fun modifyUserRelation(
+        @Field("fid") mid: Long,
+        @Field("act") action: Int,
+        @Field("re_src") source: Int = 14,
+        @Field("csrf") csrf: String
+    ): BiliResponse<Any>
 
     @GET("x/player/playurl")
     suspend fun getPlayUrl(

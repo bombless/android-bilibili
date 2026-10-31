@@ -42,7 +42,8 @@ class BiliApp : Application(), ImageLoaderFactory {
         videoRepository = VideoRepository(
             apiService = retrofitClient.apiService,
             okHttpClient = retrofitClient.okHttpClient,
-            gson = retrofitClient.gson
+            gson = retrofitClient.gson,
+            sessionStore = sessionStore
         )
         dynamicRepository = DynamicRepository(retrofitClient.apiService)
         cdpSyncManager = EdgeCdpSyncManager(

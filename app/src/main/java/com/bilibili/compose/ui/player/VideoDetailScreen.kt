@@ -110,7 +110,13 @@ fun VideoDetailScreen(
                 // Video Info
                 uiState.videoDetail?.let { detail ->
                     item {
-                        VideoInfoSection(video = detail)
+                        VideoInfoSection(
+                            video = detail,
+                            isFollowing = uiState.creatorFollowing,
+                            isUpdatingFollow = uiState.isUpdatingFollow,
+                            followError = uiState.followError,
+                            onFollowClick = { viewModel.toggleCreatorFollow() }
+                        )
                     }
 
                     // Video Parts (if multi-part)

@@ -2,6 +2,7 @@ package com.bilibili.compose.data.repository
 
 import android.util.Log
 import com.bilibili.compose.data.api.BiliApiService
+import com.bilibili.compose.data.local.UserSessionStore
 import com.bilibili.compose.data.model.*
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -17,8 +18,34 @@ class VideoRepository(
     private val okHttpClient: OkHttpClient = OkHttpClient(),
     private val gson: Gson = GsonBuilder()
         .registerTypeAdapter(RcmdReason::class.java, RcmdReasonAdapter())
-        .create()
+        .create(),
+    private val sessionStore: UserSessionStore
 ) {
+
+    suspend fun getCreatorFollowing(mid: Long): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getUserRelation(mid)
+            if (response.isSuccess && response.data != null) Result.success(response.data.attribute == 2 || response.data.attribute == 6)
+            else Result.failure(Exception(response.message.ifBlank { "获取关注状态失败 (code: ${response.code})" }))
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun setCreatorFollowing(mid: Long, follow: Boolean): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val cookie = sessionStore.getCookieHeader()
+            if (cookie.isBlank()) return@withContext Result.failure(Exception("请先登录 Bilibili"))
+            val csrf = cookie.split(';').firstOrNull { it.trim().startsWith("bili_jct=") }?.substringAfter('=')?.trim().orEmpty()
+            if (csrf.isBlank()) return@withContext Result.failure(Exception("登录凭据缺少 bili_jct，请重新同步登录状态"))
+            val response = apiService.modifyUserRelation(mid, if (follow) 1 else 2, csrf = csrf)
+            if (!response.isSuccess && !(follow && response.code == 22014))
+                return@withContext Result.failure(Exception(response.message.ifBlank { "操作关注失败 (code: ${response.code})" }))
+            val confirmed = apiService.getUserRelation(mid)
+            if (confirmed.isSuccess && confirmed.data != null) {
+                val following = confirmed.data.attribute == 2 || confirmed.data.attribute == 6
+                if (following == follow) Result.success(following) else Result.failure(Exception("请求已提交，但关注状态尚未同步，请稍后重试"))
+            } else Result.failure(Exception(confirmed.message.ifBlank { "操作后无法确认关注状态" }))
+        } catch (e: Exception) { Result.failure(e) }
+    }
 
     suspend fun getHistory(
         max: Long = 0,

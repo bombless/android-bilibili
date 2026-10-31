@@ -15,6 +15,9 @@ import kotlinx.coroutines.launch
 data class PlayerUiState(
     val bvid: String = "",
     val videoDetail: VideoViewData? = null,
+    val creatorFollowing: Boolean? = null,
+    val isUpdatingFollow: Boolean = false,
+    val followError: String? = null,
     val selectedCid: Long = 0,
     val videoStreamUrl: String? = null,
     val acceptDescriptions: List<String> = emptyList(),
@@ -69,6 +72,25 @@ class PlayerViewModel(private val videoRepository: VideoRepository) : ViewModel(
                     isLoadingDetail = false
                 )
 
+                detail.owner?.mid?.takeIf { it > 0 }?.let { mid ->
+                    viewModelScope.launch {
+                        videoRepository.getCreatorFollowing(mid)
+                            .onSuccess { following ->
+                                if (_uiState.value.videoDetail?.owner?.mid == mid) {
+                                    _uiState.value = _uiState.value.copy(creatorFollowing = following)
+                                }
+                            }
+                            .onFailure { error ->
+                                if (_uiState.value.videoDetail?.owner?.mid == mid) {
+                                    _uiState.value = _uiState.value.copy(
+                                        creatorFollowing = false,
+                                        followError = error.localizedMessage ?: "关注状态读取失败"
+                                    )
+                                }
+                            }
+                    }
+                }
+
                 // 2. Fetch Play Stream URL
                 if (cid > 0) {
                     loadPlayUrl(bvid, cid, _uiState.value.selectedQuality)
@@ -102,6 +124,18 @@ class PlayerViewModel(private val videoRepository: VideoRepository) : ViewModel(
 
     fun setTab(index: Int) {
         _uiState.value = _uiState.value.copy(selectedTab = index)
+    }
+
+    fun toggleCreatorFollow() {
+        val mid = _uiState.value.videoDetail?.owner?.mid?.takeIf { it > 0 } ?: return
+        val current = _uiState.value.creatorFollowing ?: return
+        if (_uiState.value.isUpdatingFollow) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isUpdatingFollow = true, followError = null)
+            videoRepository.setCreatorFollowing(mid, !current)
+                .onSuccess { following -> _uiState.value = _uiState.value.copy(creatorFollowing = following, isUpdatingFollow = false) }
+                .onFailure { error -> _uiState.value = _uiState.value.copy(isUpdatingFollow = false, followError = error.localizedMessage ?: "关注操作失败") }
+        }
     }
 
     private fun loadPlayUrl(bvid: String, cid: Long, quality: Int) {
